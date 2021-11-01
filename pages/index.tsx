@@ -1,7 +1,21 @@
 import type { NextPage } from "next";
 import Head from "next/head";
+import { useQuery } from "@apollo/client";
+import { GetAllHabitsQuery } from "../graphql/queries/getAllHabitsQuery";
 
 const Home: NextPage = () => {
+  const { data, error, loading, fetchMore } = useQuery(GetAllHabitsQuery, {
+    variables: {
+      first: 2,
+    },
+  });
+
+  if (loading) return <p>Loading....</p>;
+
+  if (error) return <p>Ooops! something went wrong, {error.message}</p>;
+
+  const { endCursor, hasNextPage } = data.habits.pageInfo;
+
   return (
     <div>
       <Head>
@@ -10,7 +24,37 @@ const Home: NextPage = () => {
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <h1 className=""> Hello from atomic habits app</h1>
+      <div className="container mx-auto max-w-5xl my-20">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {data?.habits.edges.map(({ node }) => (
+            <div>
+              <h1 className="text-2xl font-semibold">{node.title}</h1>
+              <p>{node.description}</p>
+            </div>
+          ))}
+        </div>
+        {hasNextPage ? (
+          <button
+            className="px-4 py-2 bg-blue-500 text-white rounded my-10"
+            onClick={() => {
+              fetchMore({
+                variables: { after: endCursor },
+                updateQuery: (prevResult, { fetchMoreResult }) => {
+                  fetchMoreResult.habits.edges = [
+                    ...prevResult.habits.edges,
+                    ...fetchMoreResult.habits.edges,
+                  ];
+                  return fetchMoreResult;
+                },
+              });
+            }}
+          >
+            more
+          </button>
+        ) : (
+          <p className="my-10 text-center">You've reached the end!</p>
+        )}
+      </div>
     </div>
   );
 };
